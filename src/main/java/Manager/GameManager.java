@@ -16,16 +16,14 @@ import net.dv8tion.jda.api.entities.*;
 
 import java.awt.*;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
+import java.util.List;
 
 public class GameManager {
 
     public static HashMap<Guild, Message> activeSongMessages = new HashMap<>();
     public static HashMap<Guild, Integer> activeRoundPlaying = new HashMap<>();
-    public static HashMap<Guild, Integer> registeredUserCount = new HashMap<>();
+    public static HashMap<Guild, List<User>> regGameUsers = new HashMap<>();
     public static HashMap<Guild, Integer> registeredWinLimit = new HashMap<>();
 
     public static HashMap<Guild, HashMap<User, Integer>> gameStatistics = new HashMap<>();
@@ -54,7 +52,7 @@ public class GameManager {
         }
 
         // Add each member a role
-        int regUsers = 0;
+        List<User> regUsers = new ArrayList<>();
         for(Member member : messageAuthor.getVoiceState().getChannel().getMembers()){
             // Skip bots
             if(member.getUser().isBot())
@@ -77,17 +75,17 @@ public class GameManager {
             }
 
 
-            regUsers++;
+            regUsers.add(member.getUser());
         }
 
-        registeredUserCount.put(guild, regUsers);
+        regGameUsers.put(guild, regUsers);
 
         //
         // Song Manager
         //
 
         // Write info message
-        final int regUserCount = regUsers;
+        final int regUserCount = regUsers.size();
         String infoMsg = "**INFO:** Get ready! The game is starting in 10 seconds. [``" + regUserCount + "`` Users]";
 
         regChannel.sendMessage(infoMsg)
@@ -108,12 +106,19 @@ public class GameManager {
                     @Override
                     public void run() {
 
-                        EmbedBuilder startMsgBuilder = new EmbedBuilder();
-                        startMsgBuilder.setDescription("Press the reaction below to make your guess. The song runs for ``" + (calculatePlayingTime(guild) / 1000) + "`` seconds!");
-                        startMsgBuilder.setColor(Color.BLUE);
+                        // Build song info message
+                        EmbedBuilder startMsgBuilder = new EmbedBuilder().setColor(Color.YELLOW);
+
+                        startMsgBuilder.setDescription("**ROUND 1**\n" +
+                                "__Song__: **- - -**\n" +
+                                "*Runtime: " + (calculatePlayingTime(guild) / 1000) + " seconds*");
+
+                        // Add each user a win counter field
+                        for(User user : regGameUsers.get(guild)) {
+                            startMsgBuilder.addField(user.getName(), "**0** Win(s)", true);
+                        }
 
                         // Send Message and waite a few seconds to begin
-
                         Message currentMsg = regChannel.sendMessage(startMsgBuilder.build()).complete();
 
 
@@ -138,9 +143,9 @@ public class GameManager {
                         activeSongMessages.put(guild, currentMsg);
                         activeRoundPlaying.put(guild, 1);
 
-                        Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
                         // Add each mod permission to write
                         if(Start.gameUserMods.containsKey(guild)) {
+                            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
                             for (Member member : Start.gameUserMods.get(guild)) {
                                 // Add active mod role to user
                                 guild.addRoleToMember(member, activeModRole).queue();
@@ -154,9 +159,7 @@ public class GameManager {
 
                                         // Check if song is still playing and round is still 1
                                         if(getPlayer(guild).isPaused() == false && activeRoundPlaying.get(guild) == 1){
-                                            String rawVideoTitle = getPlayer(guild).getPlayingTrack().getInfo().title.split("\\(")[0].split("\\[")[0];
-
-                                            manageNextRound(guild, "The timer ran out! **" + rawVideoTitle + "**", Color.RED);
+                                            manageNextRound(guild, false, "The timer ran out!");
                                         }
 
                                     }
@@ -173,15 +176,40 @@ public class GameManager {
 
     }
 
-    public static void manageNextRound(Guild guild, String endingMsg, Color endingColor){
+    public static void manageNextRound(Guild guild, Boolean correctAnswer, String endReason){
 
         TextChannel regChannel = guild.getTextChannelById(Main.settingsConfig.get(guild.getId()).get("regChannel"));
 
-        // Send ending/starting message
-        regChannel.sendMessage(new EmbedBuilder().setDescription(endingMsg + "\n*The next round is starting soon...*").setColor(endingColor).build()).queue();
+        //
+        // Edit old message and reveal song title
+        //
 
-        // Delete old message
-        activeSongMessages.get(guild).delete().queue();
+        String rawVideoTitle = getPlayer(guild).getPlayingTrack().getInfo().title.split("\\(")[0].split("\\[")[0];
+
+        // Build song info message
+        EmbedBuilder msgBuilder = new EmbedBuilder();
+
+        if(correctAnswer)
+            msgBuilder.setColor(Color.GREEN);
+        else
+            msgBuilder.setColor(Color.RED);
+
+
+        msgBuilder.setDescription("**ROUND " + activeRoundPlaying.get(guild) + "**\n" +
+                "__Song__: **" + rawVideoTitle + "**\n" +
+                endReason + " *The next round is starting soon...*");
+
+        // Add each user a win counter field
+        for(User user : regGameUsers.get(guild)) {
+            int userWins = 0;
+            if(gameStatistics.containsKey(guild) && gameStatistics.get(guild).containsKey(user))
+                userWins = gameStatistics.get(guild).get(user);
+
+            msgBuilder.addField(user.getName(), "**" + userWins + "** Win(s)", true);
+        }
+
+        // Send Message
+        activeSongMessages.get(guild).editMessage(msgBuilder.build()).flatMap(Message::clearReactions).queue();
 
         // Reset pressed users
         ReactionManager.pressedUsersList.remove(guild);
@@ -192,9 +220,9 @@ public class GameManager {
         publicSchedule = new Timer();
 
 
-        Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
         // Remove each mod permission to write
         if(Start.gameUserMods.containsKey(guild)) {
+            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
             for (Member member : Start.gameUserMods.get(guild)) {
                 if(member.getRoles().contains(activeModRole)) {
                     // Remove active mod role from user
@@ -239,10 +267,21 @@ public class GameManager {
                             return;
                         }
 
-                        // Manage new round message
-                        EmbedBuilder startMsgBuilder = new EmbedBuilder();
-                        startMsgBuilder.setDescription("**ROUND " + activeRoundCount + "**. The song runs for ``" + (calculatePlayingTime(guild) / 1000) + "`` seconds!");
-                        startMsgBuilder.setColor(Color.BLUE);
+                        // Build song info message
+                        EmbedBuilder startMsgBuilder = new EmbedBuilder().setColor(Color.YELLOW);
+
+                        startMsgBuilder.setDescription("**ROUND " + activeRoundCount + "**\n" +
+                                "__Song__: **- - -**\n" +
+                                "*Runtime: " + (calculatePlayingTime(guild) / 1000) + " seconds*");
+
+                        // Add each user a win counter field
+                        for(User user : regGameUsers.get(guild)) {
+                            int userWins = 0;
+                            if(gameStatistics.containsKey(guild) && gameStatistics.get(guild).containsKey(user))
+                                userWins = gameStatistics.get(guild).get(user);
+
+                            startMsgBuilder.addField(user.getName(), "**" + userWins + "** Win(s)", true);
+                        }
 
                         // Send Message and waite a few seconds to begin
 
@@ -271,6 +310,7 @@ public class GameManager {
 
                                         // Add each mod permission to write
                                         if(Start.gameUserMods.containsKey(guild)) {
+                                            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
                                             for (Member member : Start.gameUserMods.get(guild)) {
                                                 // Add active mod role to user
                                                 guild.addRoleToMember(member, activeModRole).queue();
@@ -284,9 +324,7 @@ public class GameManager {
 
                                                         // Check if song is still playing and round is still 1
                                                         if (getPlayer(guild).isPaused() == false && activeRoundPlaying.get(guild) == activeRoundCount) {
-                                                            String rawVideoTitle = getPlayer(guild).getPlayingTrack().getInfo().title.split("\\(")[0].split("\\[")[0];
-
-                                                            manageNextRound(guild, "The timer ran out! **" + rawVideoTitle + "**", Color.RED);
+                                                            manageNextRound(guild, false, "The timer ran out!");
                                                         }
 
                                                     }
@@ -319,7 +357,7 @@ public class GameManager {
 
         builder.setDescription(content);
         builder.setColor(Color.YELLOW);
-        builder.addField("Users", "**" + registeredUserCount.get(guild) + "**", true);
+        builder.addField("Users", "**" + regGameUsers.get(guild).size() + "**", true);
         builder.addField("Rounds", "**" + activeRoundPlaying.get(guild) + "**", true);
 
         guild.getTextChannelById(Main.settingsConfig.get(guild.getId()).get("regChannel")).sendMessage(builder.build()).queue();

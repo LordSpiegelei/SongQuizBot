@@ -126,18 +126,17 @@ public class MessageManager extends ListenerAdapter {
                     }else {
 
                         // GameManager next round
-                        GameManager.manageNextRound(guild, "**The user** " + event.getAuthor().getAsMention() + " **guessed the right song title!** [ **" + usersWins + "** WIN(S) ]" +
-                                "\n``" + rawVideoTitle + "``", Color.GREEN);
+                        GameManager.manageNextRound(guild, true, "**The user** " + event.getAuthor().getAsMention() + " **guessed the right song title!**");
                     }
 
                 }else {
 
                     // Check if all users pressed the button
-                    if (ReactionManager.pressedUsersList.get(guild).size() == GameManager.registeredUserCount.get(guild)) {
+                    if (ReactionManager.pressedUsersList.get(guild).size() == GameManager.regGameUsers.get(guild).size()) {
                         // All users pressed the button
 
                         // GameManager new round
-                        GameManager.manageNextRound(guild, "All users have guessed! **" + rawVideoTitle + "**", Color.RED);
+                        GameManager.manageNextRound(guild, false, "All users have guessed!");
                     } else {
                         // Not all users pressed the button
 
@@ -174,7 +173,7 @@ public class MessageManager extends ListenerAdapter {
 
                                         // Check if song is still playing
                                         if (GameManager.getPlayer(guild).isPaused() == false) {
-                                            GameManager.manageNextRound(guild, "The timer ran out! **" + rawVideoTitle + "**", Color.RED);
+                                            GameManager.manageNextRound(guild, false, "The timer ran out!");
 
                                         }
 

@@ -113,9 +113,7 @@ public class ReactionManager extends ListenerAdapter {
 
                                                     // Check if song is still playing and round is still 1
                                                     if (GameManager.getPlayer(guild).isPaused() == false) {
-                                                        String rawVideoTitle = GameManager.getPlayer(guild).getPlayingTrack().getInfo().title.split("\\(")[0].split("\\[")[0];
-
-                                                        GameManager.manageNextRound(guild, "The timer ran out! **" + rawVideoTitle + "**", Color.RED);
+                                                        GameManager.manageNextRound(guild, false, "The timer ran out!");
                                                     }
 
                                                 }
@@ -214,9 +212,7 @@ public class ReactionManager extends ListenerAdapter {
 
                                                     // Check if song is still playing and round is still 1
                                                     if (GameManager.getPlayer(guild).isPaused() == false) {
-                                                        String rawVideoTitle = GameManager.getPlayer(guild).getPlayingTrack().getInfo().title.split("\\(")[0].split("\\[")[0];
-
-                                                        GameManager.manageNextRound(guild, "The timer ran out! **" + rawVideoTitle + "**", Color.RED);
+                                                        GameManager.manageNextRound(guild, false, "The timer ran out!");
                                                     }
 
                                                 }

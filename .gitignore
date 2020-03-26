@@ -1,0 +1,9 @@
+Files/**
+out/**
+src/main/resources/**
+target/**
+.idea/**
+**.txt
+SongQuizBot.iml
+SongQuizBot.jar
+**.bat

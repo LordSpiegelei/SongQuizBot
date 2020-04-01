@@ -4,6 +4,7 @@ import Commands.CommandManager;
 import Commands.Start;
 import Manager.MessageManager;
 import Manager.ReactionManager;
+import Utils.SECRETS;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -11,6 +12,7 @@ import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import org.kohsuke.github.GitHub;
 
 import javax.security.auth.login.LoginException;
 import javax.swing.*;
@@ -31,16 +33,28 @@ public class Main {
 
     public static String DISCORD_TOKEN = "";
 
+    private static GitHub github;
+
     public static void main(String[] args)
-            throws LoginException
-    {
+            throws LoginException, IOException {
         // Register log channel (gui)
         registerConsole();
 
         loadSecrets();
 
+        // Check Discord Token
         if(DISCORD_TOKEN.equalsIgnoreCase("") || DISCORD_TOKEN.equalsIgnoreCase("?")) {
             System.out.println("Write your Discord Bot Token in botSettings.txt and restart");
+            return;
+        }
+
+        // Connect to Github
+        github = GitHub.connectUsingPassword(SECRETS.GITHUB_LOGIN, SECRETS.GITHUB_PW);
+
+        // Check if new version is available
+        if(checkForNewVersion()){
+            System.out.println("A NEW VERSION IS AVAILABLE! Update to continue");
+            System.out.println("https://lordspiegelei.github.io/ or https://github.com/LordSpiegelei/SongQuizBot/releases");
             return;
         }
 
@@ -126,7 +140,7 @@ public class Main {
 
     private static void registerConsole(){
         JFrame frame = new JFrame();
-        frame.add( new JLabel(" Outout" ), BorderLayout.NORTH );
+        frame.add( new JLabel(" Console" ), BorderLayout.NORTH );
 
         JTextArea ta = new JTextArea();
         TextAreaOutputStream taos = new TextAreaOutputStream( ta, 60 );
@@ -147,6 +161,22 @@ public class Main {
                 System.exit(0);
             }
         });
+    }
+
+    public static boolean checkForNewVersion(){
+
+        String tagName = SECRETS.BOT_VERSION;
+
+        try {
+            tagName = github.getRepositoryById(SECRETS.GITHUB_ID).getLatestRelease().getTagName();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if(tagName.equalsIgnoreCase(SECRETS.BOT_VERSION))
+            return false;
+        else
+            return true;
     }
 
     public static HashMap<String, HashMap<String, String>> settingsConfig = new HashMap<>();

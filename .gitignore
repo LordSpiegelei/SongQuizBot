@@ -7,3 +7,4 @@ target/**
 SongQuizBot.iml
 SongQuizBot.jar
 **.bat
+src/main/java/Utils/**

@@ -40,10 +40,14 @@ public class Main {
         // Register log channel (gui)
         registerConsole();
 
+        // Output running version
+        System.out.println("Running Discord Song Quiz Bot " + SECRETS.BOT_VERSION);
+
         loadSecrets();
 
         // Check Discord Token
         if(DISCORD_TOKEN.equalsIgnoreCase("") || DISCORD_TOKEN.equalsIgnoreCase("?")) {
+            System.out.println("- - -");
             System.out.println("Write your Discord Bot Token in botSettings.txt and restart");
             return;
         }
@@ -53,6 +57,7 @@ public class Main {
 
         // Check if new version is available
         if(checkForNewVersion()){
+            System.out.println("- - -");
             System.out.println("A NEW VERSION IS AVAILABLE! Update to continue");
             System.out.println("https://lordspiegelei.github.io/ or https://github.com/LordSpiegelei/SongQuizBot/releases");
             return;

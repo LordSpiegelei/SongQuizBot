@@ -346,6 +346,11 @@ public class Start extends ListenerAdapter {
         // Check if message is settings message
         if(settingsMessage.containsKey(guild) && event.getReaction().getMessageId().equals(settingsMessage.get(guild).getId())) {
 
+            // Check if user has permission
+            Role activeRole = guild.getRolesByName("SongQuiz Active Users", false).get(0);
+            if(!event.getMember().getRoles().contains(activeRole))
+                return;
+
             // Get settings of guild
             HashMap<String, Boolean> guildMap = gameSettings.get(guild);
 
@@ -410,6 +415,11 @@ public class Start extends ListenerAdapter {
 
         // Check if message is settings message
         if(settingsMessage.containsKey(guild) && event.getReaction().getMessageId().equals(settingsMessage.get(guild).getId())){
+
+            // Check if user has permission
+            Role activeRole = guild.getRolesByName("SongQuiz Active Users", false).get(0);
+            if(!event.getMember().getRoles().contains(activeRole))
+                return;
 
             // Get settings of guild
             HashMap<String, Boolean> guildMap = gameSettings.get(guild);

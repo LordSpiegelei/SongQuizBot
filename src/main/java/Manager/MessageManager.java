@@ -152,6 +152,17 @@ public class MessageManager extends ListenerAdapter {
                             e.printStackTrace();
                         }
 
+                        // Remove each mod permission to write
+                        if(Start.gameUserMods.containsKey(guild)) {
+                            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
+                            for (Member member : Start.gameUserMods.get(guild)) {
+                                if(member.getRoles().contains(activeModRole)) {
+                                    // Remove active mod role from user
+                                    guild.removeRoleFromMember(member, activeModRole).queue();
+                                }
+                            }
+                        }
+
 
                         // Cancel all other timers
                         GameManager.publicSchedule.cancel();

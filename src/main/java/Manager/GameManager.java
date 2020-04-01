@@ -143,15 +143,6 @@ public class GameManager {
                         activeSongMessages.put(guild, currentMsg);
                         activeRoundPlaying.put(guild, 1);
 
-                        // Add each mod permission to write
-                        if(Start.gameUserMods.containsKey(guild)) {
-                            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
-                            for (Member member : Start.gameUserMods.get(guild)) {
-                                // Add active mod role to user
-                                guild.addRoleToMember(member, activeModRole).queue();
-                            }
-                        }
-
                         publicSchedule.schedule(
                                 new TimerTask() {
                                     @Override
@@ -307,15 +298,6 @@ public class GameManager {
 
                                         activeSongMessages.put(guild, currentMsg);
                                         activeRoundPlaying.put(guild, activeRoundCount);
-
-                                        // Add each mod permission to write
-                                        if(Start.gameUserMods.containsKey(guild)) {
-                                            Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
-                                            for (Member member : Start.gameUserMods.get(guild)) {
-                                                // Add active mod role to user
-                                                guild.addRoleToMember(member, activeModRole).queue();
-                                            }
-                                        }
 
                                         publicSchedule.schedule(
                                                 new TimerTask() {

@@ -4,6 +4,7 @@ import Commands.Start;
 import Core.Main;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.react.GuildMessageReactionAddEvent;
@@ -165,6 +166,33 @@ public class ReactionManager extends ListenerAdapter {
 
                     event.getChannel().sendMessage(builder.build()).queue();
 
+                    // Manage mods
+                    if(Start.gameUserMods.containsKey(guild)) {
+
+                        // Get mod mentions
+                        String modMentions = "";
+
+                        // Add each moderator role
+                        for(Member member : Start.gameUserMods.get(guild)){
+                            guild.addRoleToMember(member, passiveModRole).queue();
+
+                            modMentions += " " + member.getAsMention();
+                        }
+
+                        // Send mod info message
+                        EmbedBuilder modMsgBuilder = new EmbedBuilder().setColor(Color.GREEN);
+                        modMsgBuilder.setDescription(event.getUser().getAsMention() + " *used a joker!* " + modMentions + " **please make your guesses!**");
+
+                        Start.moderatorChannel.get(guild).sendMessage(modMsgBuilder.build()).queue();
+
+                        // Add each mod permission to write
+                        Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
+                        for (Member member : Start.gameUserMods.get(guild)) {
+                            // Add active mod role to user
+                            guild.addRoleToMember(member, activeModRole).queue();
+                        }
+                    }
+
                     // Cancel all other timers
                     GameManager.publicSchedule.cancel();
                     GameManager.publicSchedule.purge();
@@ -190,6 +218,17 @@ public class ReactionManager extends ListenerAdapter {
                                         GameManager.activeSongMessages.get(guild).addReaction(Main.reactionEmote).queue();
                                     }catch (Exception e){
                                         e.printStackTrace();
+                                    }
+
+                                    // Remove each mod permission to write
+                                    if(Start.gameUserMods.containsKey(guild)) {
+                                        Role activeModRole = guild.getRolesByName("SongQuiz active Mod", false).get(0);
+                                        for (Member member : Start.gameUserMods.get(guild)) {
+                                            if(member.getRoles().contains(activeModRole)) {
+                                                // Remove active mod role from user
+                                                guild.removeRoleFromMember(member, activeModRole).queue();
+                                            }
+                                        }
                                     }
 
                                     // Cancel all other timers

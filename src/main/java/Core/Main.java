@@ -13,6 +13,8 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 
 import javax.security.auth.login.LoginException;
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Timer;
@@ -32,11 +34,14 @@ public class Main {
     public static void main(String[] args)
             throws LoginException
     {
+        // Register log channel (gui)
+        registerConsole();
+
         loadSecrets();
 
         if(DISCORD_TOKEN.equalsIgnoreCase("") || DISCORD_TOKEN.equalsIgnoreCase("?")) {
-            System.out.println("Write your Discord Bot Token in botSettings.txt");
-            System.exit(0);
+            System.out.println("Write your Discord Bot Token in botSettings.txt and restart");
+            return;
         }
 
         jda = new JDABuilder(DISCORD_TOKEN).build();
@@ -117,6 +122,31 @@ public class Main {
         jda.addEventListener(new ReactionManager());
         jda.addEventListener(new MessageManager());
         jda.addEventListener(new Start());
+    }
+
+    private static void registerConsole(){
+        JFrame frame = new JFrame();
+        frame.add( new JLabel(" Outout" ), BorderLayout.NORTH );
+
+        JTextArea ta = new JTextArea();
+        TextAreaOutputStream taos = new TextAreaOutputStream( ta, 60 );
+        PrintStream ps = new PrintStream( taos );
+        System.setOut( ps );
+        System.setErr( ps );
+
+        frame.add( new JScrollPane( ta )  );
+
+        frame.pack();
+        frame.setVisible( true );
+        frame.setSize(800,600);
+
+        // Close window event
+        frame.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                System.exit(0);
+            }
+        });
     }
 
     public static HashMap<String, HashMap<String, String>> settingsConfig = new HashMap<>();

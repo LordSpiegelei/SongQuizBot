@@ -2,6 +2,7 @@ package Core;
 
 import Commands.CommandManager;
 import Commands.Start;
+import Manager.InterfaceManager;
 import Manager.MessageManager;
 import Manager.ReactionManager;
 import Utils.SECRETS;
@@ -16,7 +17,6 @@ import org.kohsuke.github.GitHub;
 
 import javax.security.auth.login.LoginException;
 import javax.swing.*;
-import java.awt.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Timer;
@@ -36,39 +36,63 @@ public class Main {
     private static GitHub github;
 
     public static void main(String[] args)
-            throws LoginException, IOException {
+            throws IOException {
         // Register log channel (gui)
-        registerConsole();
+        InterfaceManager.start();
 
         // Output running version
-        System.out.println("Running Discord Song Quiz Bot " + SECRETS.BOT_VERSION);
+        InterfaceManager.writeLog("Running Discord Song Quiz Bot " + SECRETS.BOT_VERSION);
 
-        loadSecrets();
+        loadConfig();
 
         // Check Discord Token
-        if(DISCORD_TOKEN.equalsIgnoreCase("") || DISCORD_TOKEN.equalsIgnoreCase("?")) {
-            System.out.println("- - -");
-            System.out.println("Write your Discord Bot Token in botSettings.txt and restart");
+        InterfaceManager.writeLog("- - -");
+        InterfaceManager.writeLog("Loading Token...");
+
+        if(requestToken())
             return;
-        }
 
         // Connect to Github
+        InterfaceManager.writeLog("- - -");
+        InterfaceManager.writeLog("Checking for new version...");
         github = GitHub.connectUsingPassword(SECRETS.GITHUB_LOGIN, SECRETS.GITHUB_PW);
 
         // Check if new version is available
         if(checkForNewVersion()){
-            System.out.println("- - -");
-            System.out.println("A NEW VERSION IS AVAILABLE! Update to continue");
-            System.out.println("https://lordspiegelei.github.io/ or https://github.com/LordSpiegelei/SongQuizBot/releases");
+            InterfaceManager.writeLog("- - -");
+            InterfaceManager.writeLog("A NEW VERSION IS AVAILABLE! Update to continue");
+            InterfaceManager.writeLog("https://lordspiegelei.github.io/ or https://github.com/LordSpiegelei/SongQuizBot/releases");
+            return;
+        }else{
+            InterfaceManager.writeLog("No new version found");
+            InterfaceManager.writeLog("- - -");
+            InterfaceManager.writeLog("Starting Bot...");
+        }
+
+        try {
+            jda = new JDABuilder(DISCORD_TOKEN).build();
+        } catch (LoginException e) {
+            e.printStackTrace();
+
+            // Send log info
+            InterfaceManager.writeLog("ERROR: " + e.getMessage());
+
+            // Remove token from config
+            settingsConfig.remove("general");
+            saveConfig();
+            InterfaceManager.writeLog("Please restart and reenter Token!");
+
             return;
         }
 
-        jda = new JDABuilder(DISCORD_TOKEN).build();
+        // Send success message
+        InterfaceManager.writeLog("Success");
+
+        // Enable reset button
+        InterfaceManager.resetButton.setEnabled(true);
 
         jda.getPresence().setStatus(OnlineStatus.ONLINE);
         jda.getPresence().setActivity(Activity.watching("+help"));
-
-        loadConfig();
 
         registerListener();
 
@@ -143,29 +167,31 @@ public class Main {
         jda.addEventListener(new Start());
     }
 
-    private static void registerConsole(){
-        JFrame frame = new JFrame();
-        frame.add( new JLabel(" Console" ), BorderLayout.NORTH );
+    private static boolean requestToken(){
+        // Check if token is registered
+        if(settingsConfig.containsKey("general") && settingsConfig.get("general").containsKey("token")){
+            DISCORD_TOKEN = settingsConfig.get("general").get("token");
+        }
 
-        JTextArea ta = new JTextArea();
-        TextAreaOutputStream taos = new TextAreaOutputStream( ta, 60 );
-        PrintStream ps = new PrintStream( taos );
-        System.setOut( ps );
-        System.setErr( ps );
+        if(DISCORD_TOKEN.equalsIgnoreCase("")) {
+            // Open window with input & check if input is correct
+            String frameResult = JOptionPane.showInputDialog(InterfaceManager.interfaceFrame, "Please enter your Discord Bot Token", "Token Request", JOptionPane.PLAIN_MESSAGE);
+            if (frameResult == null){
+                // Quit Application
+                InterfaceManager.writeLog("No Token were given... Please restart");
+                return true;
+            }else{
+                HashMap<String, String> generalMap = new HashMap<>();
+                generalMap.put("token", frameResult.replaceAll(" ", ""));
+                settingsConfig.put("general", generalMap);
+                saveConfig();
 
-        frame.add( new JScrollPane( ta )  );
-
-        frame.pack();
-        frame.setVisible( true );
-        frame.setSize(800,600);
-
-        // Close window event
-        frame.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                System.exit(0);
+                DISCORD_TOKEN = frameResult;
             }
-        });
+        }
+        System.out.println(DISCORD_TOKEN);
+
+        return false;
     }
 
     public static boolean checkForNewVersion(){
@@ -219,42 +245,6 @@ public class Main {
                 e1.printStackTrace();
             } catch (ClassNotFoundException e1) {
                 e1.printStackTrace();
-            }
-        }
-    }
-
-    public static void loadSecrets(){
-        File file = new File("botSettings.txt");
-        if(file.exists()) {
-            try {
-                FileReader fr = new FileReader(file);
-                BufferedReader br = new BufferedReader(fr);
-                String line;
-                while ((line = br.readLine()) != null) {
-                    // Check if line starts with "T"
-                    if(line.startsWith("Token=")){
-                        DISCORD_TOKEN = line.replaceFirst("Token=", "").replaceAll("\"", "").replaceAll(" ", "");
-                    }
-                }
-            } catch (FileNotFoundException e1) {
-                e1.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }else{
-            // Create new file
-            try {
-                FileWriter writer = new FileWriter(file.getPath(), true);
-                writer.write("Token=");
-                writer.close();
-
-                DISCORD_TOKEN = "";
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
     }

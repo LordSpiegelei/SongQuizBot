@@ -41,107 +41,100 @@ public class Start extends ListenerAdapter {
         // Check if args contain URL
         if(args.length >= 2){
 
-            // Check if guild has setup run
-            if(Main.settingsConfig.containsKey(guild.getId()) && Main.settingsConfig.get(guild.getId()).containsKey("regChannel")){
+            //
+            // Start song loading
+            //
+            String songUrl = args[1];
 
-                //
-                // Start song loading
-                //
-                String songUrl = args[1];
-
-                // Check if url is valid
-                if(!songUrl.startsWith("http://") && !songUrl.startsWith("https://")){
-                    // TODO: No valid link
-                    return;
-                }
-
-                // Check if user is in voice channel
-                if(!event.getMember().getVoiceState().inVoiceChannel()){
-                    // TODO: Not in channel
-                    return;
-                }
-
-                // Check for other users in voice channel
-                if(!(event.getMember().getVoiceState().getChannel().getMembers().size() > 0)){
-                    // TODO: No others in voice channel
-                    return;
-                }
-
-                // Setup game channel
-                TextChannel gameChannel = setupGameChannel(guild);
-
-                // Mute self headphones
-                guild.getAudioManager().setSelfDeafened(true);
-
-                AudioSourceManagers.registerRemoteSources(GameManager.audioManager);
-
-                // Clear queue and stop playing
-                if(GameManager.players.containsKey(guild)) {
-                    GameManager.getManager(guild).purgeQueue();
-                    GameManager.getPlayer(guild).stopTrack();
-                }
-
-                // Remove old settingsMessage
-                if(settingsMessage.containsKey(guild))
-                    settingsMessage.remove(guild);
-
-                // Add active role to user
-                Role passiveRole = guild.getRolesByName("SongQuiz Active Users", false).get(0);
-                guild.addRoleToMember(event.getMember(), passiveRole).queue();
-
-                // Add spectator role to other users
-                Role spectatorRole = guild.getRolesByName("SongQuiz Spectator", false).get(0);
-                for(Member member : event.getMember().getVoiceState().getChannel().getMembers()) {
-                    guild.addRoleToMember(member, spectatorRole).queue();
-                }
-
-                // Load tracks
-                GameManager.loadTrack(songUrl, event.getMember(), event.getMessage());
-
-                // Pause songs
-                GameManager.getPlayer(guild).setPaused(true);
-
-                //
-                // Register Game
-                //
-
-                // Send loading message
-                Message loadingMsg = gameChannel.sendMessage("Loading songs... [" + event.getAuthor().getAsMention() + "]").complete();
-
-                // Delay to load songs
-                new Timer().schedule(
-                        new TimerTask() {
-                            @Override
-                            public void run() {
-
-                                loadingMsg.delete().queue();
-
-                                // Set win limit
-                                if(args.length >= 3)
-                                    GameManager.registeredWinLimit.put(guild, Integer.parseInt(args[2].replaceAll("[^0-9]", "")));
-                                else
-                                    GameManager.registeredWinLimit.put(guild, -1);
-
-                                // Set joker amount
-                                if(args.length >= 4)
-                                    gameJokerAmount.put(guild, Integer.parseInt(args[3].replaceAll("[^0-9]", "")));
-                                else
-                                    gameJokerAmount.put(guild, 3);
-
-                                // Register Event
-                                regMessageEvent.put(guild, event);
-
-                                // Create message
-                                sendSettingsMessage(guild, gameChannel);
-
-                            }
-                        },
-                        10000
-                );
-
-            }else{
-                //TODO: Write no registered channel
+            // Check if url is valid
+            if(!songUrl.startsWith("http://") && !songUrl.startsWith("https://")){
+                // TODO: No valid link
+                return;
             }
+
+            // Check if user is in voice channel
+            if(!event.getMember().getVoiceState().inVoiceChannel()){
+                // TODO: Not in channel
+                return;
+            }
+
+            // Check for other users in voice channel
+            if(!(event.getMember().getVoiceState().getChannel().getMembers().size() > 0)){
+                // TODO: No others in voice channel
+                return;
+            }
+
+            // Setup game channel
+            TextChannel gameChannel = setupGameChannel(guild);
+
+            // Mute self headphones
+            guild.getAudioManager().setSelfDeafened(true);
+
+            AudioSourceManagers.registerRemoteSources(GameManager.audioManager);
+
+            // Clear queue and stop playing
+            if(GameManager.players.containsKey(guild)) {
+                GameManager.getManager(guild).purgeQueue();
+                GameManager.getPlayer(guild).stopTrack();
+            }
+
+            // Remove old settingsMessage
+            if(settingsMessage.containsKey(guild))
+                settingsMessage.remove(guild);
+
+            // Add active role to user
+            Role passiveRole = guild.getRolesByName("SongQuiz Active Users", false).get(0);
+            guild.addRoleToMember(event.getMember(), passiveRole).queue();
+
+            // Add spectator role to other users
+            Role spectatorRole = guild.getRolesByName("SongQuiz Spectator", false).get(0);
+            for(Member member : event.getMember().getVoiceState().getChannel().getMembers()) {
+                guild.addRoleToMember(member, spectatorRole).queue();
+            }
+
+            // Load tracks
+            GameManager.loadTrack(songUrl, event.getMember(), event.getMessage());
+
+            // Pause songs
+            GameManager.getPlayer(guild).setPaused(true);
+
+            //
+            // Register Game
+            //
+
+            // Send loading message
+            Message loadingMsg = gameChannel.sendMessage("Loading songs... [" + event.getAuthor().getAsMention() + "]").complete();
+
+            // Delay to load songs
+            new Timer().schedule(
+                    new TimerTask() {
+                        @Override
+                        public void run() {
+
+                            loadingMsg.delete().queue();
+
+                            // Set win limit
+                            if(args.length >= 3)
+                                GameManager.registeredWinLimit.put(guild, Integer.parseInt(args[2].replaceAll("[^0-9]", "")));
+                            else
+                                GameManager.registeredWinLimit.put(guild, -1);
+
+                            // Set joker amount
+                            if(args.length >= 4)
+                                gameJokerAmount.put(guild, Integer.parseInt(args[3].replaceAll("[^0-9]", "")));
+                            else
+                                gameJokerAmount.put(guild, 3);
+
+                            // Register Event
+                            regMessageEvent.put(guild, event);
+
+                            // Create message
+                            sendSettingsMessage(guild, gameChannel);
+
+                        }
+                    },
+                    10000
+            );
 
         }else{
             //TODO: Write no url given message
